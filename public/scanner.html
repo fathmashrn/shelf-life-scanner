@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expiry Date Scanner — Plain HTML</title>
+    <meta name="description" content="Upload a label image to extract the expiry date, see days left or if it's expired, plus other detected details." />
+    <link rel="canonical" href="/scanner.html" />
+
+    <meta property="og:title" content="Expiry Date Scanner (HTML)" />
+    <meta property="og:description" content="Extract expiry date from images and check days left or if expired. Plain HTML version." />
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary" />
+
+    <style>
+      :root {
+        --bg: #0b0c10;
+        --card: #111319;
+        --text: #e6e8ef;
+        --muted: #98a2b3;
+        --primary: #6ea8fe;
+        --destructive: #ff6b6b;
+        --border: #222633;
+        --ring: rgba(110, 168, 254, 0.3);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1200px 600px at var(--spot-x, 30%) var(--spot-y, 30%), rgba(110,168,254,.08), transparent 50%) , var(--bg);
+        color: var(--text);
+      }
+      header, main, footer { display: block; }
+      .container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+      header { padding: 56px 0 24px; text-align: center; }
+      h1 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 10px; }
+      p.lead { color: var(--muted); margin: 0; }
+
+      .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px -12px rgba(0,0,0,.5); }
+      .card-body { padding: 20px; }
+
+      label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px; }
+      input[type="file"] { width: 100%; padding: 10px; background: #0f1220; color: var(--text); border: 1px solid var(--border); border-radius: 10px; }
+      input[type="file"]:focus { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+
+      .grid { display: grid; gap: 16px; }
+      @media (min-width: 880px) {
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+      }
+
+      .preview { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #0f1220; min-height: 240px; display: grid; place-items: center; }
+      .preview img { max-width: 100%; max-height: 420px; width: 100%; height: auto; object-fit: contain; background: #0f1220; }
+
+      .progress { height: 8px; background: #0f1220; border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
+      .progress > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, rgba(110,168,254,.35), rgba(110,168,254,.9)); transition: width .25s ease; }
+
+      .status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+      .status.primary { color: var(--primary); border-color: rgba(110,168,254,.5); }
+      .status.destructive { color: var(--destructive); border-color: rgba(255,107,107,.4); }
+
+      .kvs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+      .kv { border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+      .kv span { color: var(--muted); font-size: 12px; display: block; }
+      .kv div { font-weight: 600; margin-top: 4px; }
+
+      details { border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+      summary { cursor: pointer; font-weight: 600; }
+
+      .cta { display: inline-block; margin-top: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; text-decoration: none; }
+      .center { text-align: center; }
+
+      footer { color: var(--muted); font-size: 13px; text-align: center; padding: 28px 0 40px; }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Expiry Date Scanner (HTML)",
+        "applicationCategory": "Utility",
+        "operatingSystem": "Web",
+        "description": "Upload a product label to extract the expiry date, days left or expired, and other details."
+      }
+    </script>
+  </head>
+  <body>
+    <header class="container" id="top">
+      <h1>Expiry Date Scanner (HTML)</h1>
+      <p class="lead">Upload an image and we’ll detect the expiry date, calculate days left, and extract other useful details.</p>
+    </header>
+
+    <main class="container" id="scanner">
+      <article class="card" aria-label="Expiry Date Scanner">
+        <div class="card-body">
+          <div class="grid">
+            <div>
+              <label for="uploader">Choose an image (JPG/PNG)</label>
+              <input id="uploader" type="file" accept="image/*" />
+            </div>
+
+            <div id="progressWrap" style="display:none">
+              <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:4px;">
+                <span>Running OCR…</span>
+                <span id="progressText">0%</span>
+              </div>
+              <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+            </div>
+
+            <div class="grid grid-2">
+              <div class="preview" id="previewBox" aria-live="polite">
+                <span id="previewHint" style="color:var(--muted); font-size:14px;">Preview appears here</span>
+                <img id="preview" alt="Uploaded product label preview" loading="lazy" style="display:none" />
+              </div>
+
+              <div id="results" class="grid" style="align-content:start; gap:12px;">
+                <div id="statusRow" style="display:none; align-items:center; gap:12px;">
+                  <span id="statusBadge" class="status">No expiry date detected</span>
+                  <span id="expiryDate" style="font-size:14px; color:var(--muted);"></span>
+                </div>
+
+                <div id="kvs" class="kvs" style="display:none"></div>
+
+                <details id="rawWrap" style="display:none">
+                  <summary>View raw OCR text</summary>
+                  <p id="rawText" style="white-space:pre-wrap; font-size:12px; color:var(--muted);"></p>
+                </details>
+
+                <div id="error" style="display:none; color:var(--destructive); font-size:14px;"></div>
+              </div>
+            </div>
+
+            <div class="center">
+              <a href="#top" class="cta">Back to top</a>
+            </div>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <footer class="container">Built with love. Always double‑check critical dates on packaging.</footer>
+
+    <!-- Tesseract.js (UMD) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <script>
+      // Ambient spotlight follow
+      (function() {
+        const onMove = (e) => {
+          const x = (e.clientX / window.innerWidth) * 100;
+          const y = (e.clientY / window.innerHeight) * 100;
+          document.documentElement.style.setProperty('--spot-x', x + '%');
+          document.documentElement.style.setProperty('--spot-y', y + '%');
+        };
+        window.addEventListener('mousemove', onMove);
+      })();
+
+      const monthMap = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, SEPT:8, OCT:9, NOV:10, DEC:11 };
+      const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      const diffDays = (a, b) => Math.floor((a.setHours(0,0,0,0) - b.setHours(0,0,0,0)) / 86400000);
+
+      function tryParseDate(text) {
+        if (!text) return undefined;
+        const candidates = [];
+
+        const push = (d) => { if (d && !isNaN(d.getTime())) candidates.push(d); };
+
+        // yyyy-mm-dd or yyyy/mm/dd or yyyy.m.d
+        const isoLike = text.match(/(20\d{2})[\/.\-](0?[1-9]|1[0-2])[\/.\-]([0-2]?\d|3[01])/);
+        if (isoLike) {
+          const y = +isoLike[1]; const m = +isoLike[2] - 1; const day = +isoLike[3];
+          push(new Date(y, m, day));
+        }
+
+        // dd-mm-yyyy, dd/mm/yy
+        const dmy = text.match(/([0-2]?\d|3[01])[\/.\-](0?[1-9]|1[0-2])[\/.\-](\d{2,4})/);
+        if (dmy) {
+          let y = dmy[3].length === 2 ? +('20' + dmy[3]) : +dmy[3];
+          push(new Date(y, +dmy[2]-1, +dmy[1]));
+        }
+
+        // mm-dd-yyyy
+        const mdy = text.match(/(0?[1-9]|1[0-2])[\/.\-]([0-2]?\d|3[01])[\/.\-](\d{2,4})/);
+        if (mdy) {
+          let y = mdy[3].length === 2 ? +('20' + mdy[3]) : +mdy[3];
+          push(new Date(y, +mdy[1]-1, +mdy[2]));
+        }
+
+        // 12 Jan 2026 or Jan 2026
+        const monthWordFull = text.match(/\b(\d{1,2})?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s*(\d{2,4})\b/i);
+        if (monthWordFull) {
+          const dayStr = monthWordFull[1];
+          const mon = monthWordFull[2].toUpperCase().slice(0,3);
+          const yearStr = monthWordFull[3];
+          const year = parseInt(yearStr.length === 2 ? '20' + yearStr : yearStr, 10);
+          const month = monthMap[mon];
+          if (month !== undefined) {
+            const day = dayStr ? parseInt(dayStr, 10) : 1;
+            push(new Date(year, month, day));
+          }
+        }
+
+        // Best before Jan 2026 -> end of that month
+        const bestBeforeMonth = text.match(/best\s*before.*?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s*(\d{2,4})/i);
+        if (bestBeforeMonth) {
+          const mon = bestBeforeMonth[1].toUpperCase().slice(0,3);
+          const yearStr = bestBeforeMonth[2];
+          const year = parseInt(yearStr.length === 2 ? '20' + yearStr : yearStr, 10);
+          const month = monthMap[mon];
+          if (month !== undefined) {
+            push(endOfMonth(new Date(year, month, 1)));
+          }
+        }
+
+        // strict ISO yyyy-mm-dd
+        const iso = text.match(/\b\d{4}-\d{2}-\d{2}\b/);
+        if (iso) {
+          const [y,m,d] = iso[0].split('-').map(Number);
+          push(new Date(y, m-1, d));
+        }
+
+        return candidates.sort((a,b) => a - b)[0];
+      }
+
+      function extractDetails(raw) {
+        const text = raw.replace(/\s+/g, ' ').trim();
+        const upper = text.toUpperCase();
+
+        let expiry;
+        const nearExpiry = upper.match(/(EXP(?:IRY|IRATION)?|USE\s*BY|BEST\s*BEFORE|BBE)[:\-\s]*([^\n]+)/i);
+        if (nearExpiry && nearExpiry[2]) expiry = tryParseDate(nearExpiry[2]);
+        if (!expiry) expiry = tryParseDate(upper);
+
+        let manufactured;
+        const mfd = upper.match(/(MFD|MFG|MANUFACTURED)[^\d]*(.*?)(?=LOT|BATCH|EXP|USE|BEST|$)/);
+        if (mfd && mfd[2]) manufactured = tryParseDate(mfd[2]);
+
+        let batch; const batchMatch = upper.match(/(LOT|BATCH)[:\-\s]*([A-Z0-9\-]+)/);
+        if (batchMatch) batch = batchMatch[2];
+
+        let mrp; const mrpMatch = text.match(/MRP[^\d]*([₹Rs\.]?\s*[\d.,]+)/i);
+        if (mrpMatch) mrp = mrpMatch[1].replace(/\s+/g, '');
+
+        let productName;
+        const lines = raw.split(/\n|\r/).map(l => l.trim()).filter(Boolean);
+        for (const l of lines) {
+          const u = l.toUpperCase();
+          if (u.length > 3 && !/(EXP|MFD|MFG|LOT|BATCH|BEST|BEFORE|USE|BY|MRP|DATE)/.test(u)) { productName = l; break; }
+        }
+
+        const labels = {};
+        if (batch) labels['Batch/Lot'] = batch;
+        if (mrp) labels['MRP'] = mrp;
+        if (manufactured) labels['Manufactured'] = manufactured.toDateString();
+
+        return { rawText: raw, expiryDate: expiry, manufacturedDate: manufactured, batch, mrp, productName, labels };
+      }
+
+      const els = {
+        input: document.getElementById('uploader'),
+        preview: document.getElementById('preview'),
+        previewHint: document.getElementById('previewHint'),
+        progressWrap: document.getElementById('progressWrap'),
+        progressText: document.getElementById('progressText'),
+        progressBar: document.getElementById('progressBar'),
+        statusRow: document.getElementById('statusRow'),
+        statusBadge: document.getElementById('statusBadge'),
+        expiryDate: document.getElementById('expiryDate'),
+        kvs: document.getElementById('kvs'),
+        rawWrap: document.getElementById('rawWrap'),
+        rawText: document.getElementById('rawText'),
+        error: document.getElementById('error'),
+      };
+
+      async function handleFile(file) {
+        els.error.style.display = 'none';
+        els.statusRow.style.display = 'none';
+        els.kvs.style.display = 'none';
+        els.rawWrap.style.display = 'none';
+        els.progressWrap.style.display = '';
+        els.progressText.textContent = '0%';
+        els.progressBar.style.width = '0%';
+
+        const url = URL.createObjectURL(file);
+        els.preview.src = url;
+        els.preview.style.display = '';
+        els.previewHint.style.display = 'none';
+
+        try {
+          const result = await Tesseract.recognize(url, 'eng', {
+            logger: (m) => {
+              if (m.status === 'recognizing text' && m.progress != null) {
+                const pct = Math.round(m.progress * 100);
+                els.progressText.textContent = pct + '%';
+                els.progressBar.style.width = pct + '%';
+              }
+            }
+          });
+
+          els.progressWrap.style.display = 'none';
+
+          const text = (result && result.data && result.data.text) ? result.data.text : '';
+          const details = extractDetails(text);
+
+          // status
+          let badgeText = 'No expiry date detected';
+          let badgeClass = 'status';
+          if (details.expiryDate) {
+            const now = new Date();
+            const days = Math.floor((details.expiryDate.setHours(0,0,0,0) - now.setHours(0,0,0,0)) / 86400000);
+            if (days < 0) { badgeText = `Expired ${Math.abs(days)} day${Math.abs(days)===1?'':'s'} ago`; badgeClass += ' destructive'; }
+            else if (days === 0) { badgeText = 'Expires today'; }
+            else { badgeText = `${days} day${days===1?'':'s'} left`; badgeClass += ' primary'; }
+            els.expiryDate.textContent = 'Expiry: ' + details.expiryDate.toDateString();
+          } else {
+            els.expiryDate.textContent = '';
+          }
+          els.statusBadge.className = badgeClass;
+          els.statusBadge.textContent = badgeText;
+          els.statusRow.style.display = '';
+
+          // kvs
+          els.kvs.innerHTML = '';
+          const addKV = (label, value) => {
+            const d = document.createElement('div');
+            d.className = 'kv';
+            d.innerHTML = `<span>${label}</span><div>${value}</div>`;
+            els.kvs.appendChild(d);
+          };
+          if (details.productName) addKV('Product', details.productName);
+          if (details.batch) addKV('Batch/Lot', details.batch);
+          if (details.mrp) addKV('MRP', details.mrp);
+          if (details.manufacturedDate) addKV('Manufactured', details.manufacturedDate.toDateString());
+          if (els.kvs.children.length > 0) els.kvs.style.display = ''; else els.kvs.style.display = 'none';
+
+          // raw
+          els.rawText.textContent = details.rawText || '';
+          els.rawWrap.style.display = details.rawText ? '' : 'none';
+        } catch (err) {
+          console.error(err);
+          els.progressWrap.style.display = 'none';
+          els.error.textContent = 'Failed to process the image. Please try a clearer photo.';
+          els.error.style.display = '';
+        }
+      }
+
+      els.input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleFile(file);
+      });
+    </script>
+  </body>
+</html>
