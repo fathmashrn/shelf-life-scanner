@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Tesseract from "tesseract.js";
 import { differenceInCalendarDays, endOfMonth, parse, parseISO } from "date-fns";
 
@@ -142,6 +144,8 @@ export default function ExpiryScanner() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<OCRDetails | null>(null);
+  const [engine, setEngine] = useState<'vision' | 'tesseract'>(() => (localStorage.getItem('ocrEngine') as 'vision'|'tesseract') || (localStorage.getItem('gcvApiKey') ? 'vision' : 'tesseract'));
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gcvApiKey') || 'AIzaSyDFP57AKe55eqo_JUx0CVC7MK47ADykJPs');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
@@ -153,33 +157,67 @@ export default function ExpiryScanner() {
     containerRef.current.style.setProperty("--spot-y", `${y}%`);
   }, []);
 
-  const handleFile = async (file: File) => {
-    setError(null);
-    setDetails(null);
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
-    setLoading(true);
-    setProgress(0);
+const handleFile = async (file: File) => {
+  setError(null);
+  setDetails(null);
+  const url = URL.createObjectURL(file);
+  setImageUrl(url);
+  setLoading(true);
+  setProgress(0);
 
-    try {
+  const fileToBase64 = (f: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result as string;
+      resolve(res.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(f);
+  });
+
+  try {
+    let text = "";
+    if (engine === 'vision') {
+      if (!apiKey) throw new Error('Missing Google Cloud Vision API key');
+      setProgress(10);
+      const base64 = await fileToBase64(file);
+      const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}` , {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [
+            {
+              image: { content: base64 },
+              features: [{ type: 'TEXT_DETECTION' }],
+              imageContext: { languageHints: ['en'] }
+            }
+          ]
+        })
+      });
+      if (!resp.ok) throw new Error('Vision API request failed');
+      const data = await resp.json();
+      text = data?.responses?.[0]?.fullTextAnnotation?.text || data?.responses?.[0]?.textAnnotations?.[0]?.description || "";
+      setProgress(100);
+    } else {
       const result = await Tesseract.recognize(url, "eng", {
         logger: (m) => {
-          if (m.status === "recognizing text" && m.progress) {
+          if (m.status === "recognizing text" && m.progress != null) {
             setProgress(Math.round(m.progress * 100));
           }
         },
       });
-
-      const text = result.data?.text || "";
-      const extracted = extractDetails(text);
-      setDetails(extracted);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to process the image. Please try a clearer photo.");
-    } finally {
-      setLoading(false);
+      text = result.data?.text || "";
     }
-  };
+
+    const extracted = extractDetails(text);
+    setDetails(extracted);
+  } catch (err: any) {
+    console.error(err);
+    setError(err?.message || "Failed to process the image. Please try a clearer photo.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const status = useMemo(() => {
     if (!details?.expiryDate) return { label: "No expiry date detected", tone: "muted" as const };
@@ -204,19 +242,45 @@ export default function ExpiryScanner() {
               <CardDescription>We will extract the expiry date and other details automatically.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <label htmlFor="uploader" className="text-sm">Choose an image (JPG/PNG)</label>
-                  <Input
-                    id="uploader"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFile(f);
-                    }}
-                  />
-                </div>
+<div className="grid gap-4">
+  <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid gap-2">
+      <Label className="text-sm">OCR engine</Label>
+      <Select value={engine} onValueChange={(v) => { setEngine(v as 'vision'|'tesseract'); localStorage.setItem('ocrEngine', v); }}>
+        <SelectTrigger aria-label="Select OCR engine"><SelectValue placeholder="Select engine" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="vision">Google Vision (AI)</SelectItem>
+          <SelectItem value="tesseract">Tesseract (offline)</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+    {engine === 'vision' && (
+      <div className="grid gap-2">
+        <Label htmlFor="gcvKey" className="text-sm">Google Vision API key (stored locally)</Label>
+        <Input
+          id="gcvKey"
+          type="password"
+          placeholder="AIza..."
+          value={apiKey}
+          onChange={(e) => { setApiKey(e.target.value); localStorage.setItem('gcvApiKey', e.target.value); }}
+        />
+      </div>
+    )}
+  </div>
+
+  <div className="grid gap-2">
+    <label htmlFor="uploader" className="text-sm">Choose an image (JPG/PNG)</label>
+    <Input
+      id="uploader"
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) handleFile(f);
+      }}
+    />
+  </div>
+</div>
 
                 {imageUrl && (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -287,7 +351,6 @@ export default function ExpiryScanner() {
                     </label>
                   </div>
                 )}
-              </div>
             </CardContent>
           </Card>
         </div>

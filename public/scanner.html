@@ -92,11 +92,25 @@
     <main class="container" id="scanner">
       <article class="card" aria-label="Expiry Date Scanner">
         <div class="card-body">
-          <div class="grid">
-            <div>
-              <label for="uploader">Choose an image (JPG/PNG)</label>
-              <input id="uploader" type="file" accept="image/*" />
-            </div>
+<div class="grid">
+  <div class="grid grid-2">
+    <div>
+      <label for="engine">OCR engine</label>
+      <select id="engine" style="width:100%; padding:10px; background:#0f1220; color:var(--text); border:1px solid var(--border); border-radius:10px;">
+        <option value="tesseract">Tesseract (offline)</option>
+        <option value="vision">Google Vision (AI)</option>
+      </select>
+    </div>
+    <div id="apiKeyWrap" style="display:none">
+      <label for="apiKey">Google Vision API key (stored locally)</label>
+      <input id="apiKey" type="password" placeholder="AIza..." style="width:100%; padding:10px; background:#0f1220; color:var(--text); border:1px solid var(--border); border-radius:10px;" />
+    </div>
+  </div>
+  <div>
+    <label for="uploader">Choose an image (JPG/PNG)</label>
+    <input id="uploader" type="file" accept="image/*" />
+  </div>
+</div>
 
             <div id="progressWrap" style="display:none">
               <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:4px;">
@@ -255,98 +269,148 @@
         return { rawText: raw, expiryDate: expiry, manufacturedDate: manufactured, batch, mrp, productName, labels };
       }
 
-      const els = {
-        input: document.getElementById('uploader'),
-        preview: document.getElementById('preview'),
-        previewHint: document.getElementById('previewHint'),
-        progressWrap: document.getElementById('progressWrap'),
-        progressText: document.getElementById('progressText'),
-        progressBar: document.getElementById('progressBar'),
-        statusRow: document.getElementById('statusRow'),
-        statusBadge: document.getElementById('statusBadge'),
-        expiryDate: document.getElementById('expiryDate'),
-        kvs: document.getElementById('kvs'),
-        rawWrap: document.getElementById('rawWrap'),
-        rawText: document.getElementById('rawText'),
-        error: document.getElementById('error'),
-      };
+const els = {
+  input: document.getElementById('uploader'),
+  engine: document.getElementById('engine'),
+  apiKey: document.getElementById('apiKey'),
+  apiKeyWrap: document.getElementById('apiKeyWrap'),
+  preview: document.getElementById('preview'),
+  previewHint: document.getElementById('previewHint'),
+  progressWrap: document.getElementById('progressWrap'),
+  progressText: document.getElementById('progressText'),
+  progressBar: document.getElementById('progressBar'),
+  statusRow: document.getElementById('statusRow'),
+  statusBadge: document.getElementById('statusBadge'),
+  expiryDate: document.getElementById('expiryDate'),
+  kvs: document.getElementById('kvs'),
+  rawWrap: document.getElementById('rawWrap'),
+  rawText: document.getElementById('rawText'),
+  error: document.getElementById('error'),
+};
 
-      async function handleFile(file) {
-        els.error.style.display = 'none';
-        els.statusRow.style.display = 'none';
-        els.kvs.style.display = 'none';
-        els.rawWrap.style.display = 'none';
-        els.progressWrap.style.display = '';
-        els.progressText.textContent = '0%';
-        els.progressBar.style.width = '0%';
+// Initialize engine + API key
+const savedEngine = localStorage.getItem('ocrEngine') || (localStorage.getItem('gcvApiKey') ? 'vision' : 'tesseract');
+els.engine.value = savedEngine;
+els.apiKey.value = localStorage.getItem('gcvApiKey') || 'AIzaSyDFP57AKe55eqo_JUx0CVC7MK47ADykJPs';
+els.apiKeyWrap.style.display = els.engine.value === 'vision' ? '' : 'none';
+els.engine.addEventListener('change', () => {
+  localStorage.setItem('ocrEngine', els.engine.value);
+  els.apiKeyWrap.style.display = els.engine.value === 'vision' ? '' : 'none';
+});
+els.apiKey.addEventListener('input', () => {
+  localStorage.setItem('gcvApiKey', els.apiKey.value);
+});
 
-        const url = URL.createObjectURL(file);
-        els.preview.src = url;
-        els.preview.style.display = '';
-        els.previewHint.style.display = 'none';
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result;
+      resolve((typeof res === 'string' ? res.split(',')[1] : '') || '');
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-        try {
-          const result = await Tesseract.recognize(url, 'eng', {
-            logger: (m) => {
-              if (m.status === 'recognizing text' && m.progress != null) {
-                const pct = Math.round(m.progress * 100);
-                els.progressText.textContent = pct + '%';
-                els.progressBar.style.width = pct + '%';
-              }
-            }
-          });
+async function runVisionOCR(file, apiKey) {
+  els.progressText.textContent = '10%';
+  els.progressBar.style.width = '10%';
+  const base64 = await readFileAsBase64(file);
+  const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [{ image: { content: base64 }, features: [{ type: 'TEXT_DETECTION' }], imageContext: { languageHints: ['en'] } }]
+    })
+  });
+  if (!resp.ok) throw new Error('Vision API request failed');
+  const data = await resp.json();
+  els.progressText.textContent = '100%';
+  els.progressBar.style.width = '100%';
+  return (data && data.responses && (data.responses[0]?.fullTextAnnotation?.text || data.responses[0]?.textAnnotations?.[0]?.description)) || '';
+}
 
-          els.progressWrap.style.display = 'none';
+async function handleFile(file) {
+  els.error.style.display = 'none';
+  els.statusRow.style.display = 'none';
+  els.kvs.style.display = 'none';
+  els.rawWrap.style.display = 'none';
+  els.progressWrap.style.display = '';
+  els.progressText.textContent = '0%';
+  els.progressBar.style.width = '0%';
 
-          const text = (result && result.data && result.data.text) ? result.data.text : '';
-          const details = extractDetails(text);
+  const url = URL.createObjectURL(file);
+  els.preview.src = url;
+  els.preview.style.display = '';
+  els.previewHint.style.display = 'none';
 
-          // status
-          let badgeText = 'No expiry date detected';
-          let badgeClass = 'status';
-          if (details.expiryDate) {
-            const now = new Date();
-            const days = Math.floor((details.expiryDate.setHours(0,0,0,0) - now.setHours(0,0,0,0)) / 86400000);
-            if (days < 0) { badgeText = `Expired ${Math.abs(days)} day${Math.abs(days)===1?'':'s'} ago`; badgeClass += ' destructive'; }
-            else if (days === 0) { badgeText = 'Expires today'; }
-            else { badgeText = `${days} day${days===1?'':'s'} left`; badgeClass += ' primary'; }
-            els.expiryDate.textContent = 'Expiry: ' + details.expiryDate.toDateString();
-          } else {
-            els.expiryDate.textContent = '';
+  try {
+    let text = '';
+    if (els.engine.value === 'vision') {
+      const key = els.apiKey.value.trim();
+      if (!key) throw new Error('Missing Google Vision API key');
+      text = await runVisionOCR(file, key);
+      els.progressWrap.style.display = 'none';
+    } else {
+      const result = await Tesseract.recognize(url, 'eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text' && m.progress != null) {
+            const pct = Math.round(m.progress * 100);
+            els.progressText.textContent = pct + '%';
+            els.progressBar.style.width = pct + '%';
           }
-          els.statusBadge.className = badgeClass;
-          els.statusBadge.textContent = badgeText;
-          els.statusRow.style.display = '';
-
-          // kvs
-          els.kvs.innerHTML = '';
-          const addKV = (label, value) => {
-            const d = document.createElement('div');
-            d.className = 'kv';
-            d.innerHTML = `<span>${label}</span><div>${value}</div>`;
-            els.kvs.appendChild(d);
-          };
-          if (details.productName) addKV('Product', details.productName);
-          if (details.batch) addKV('Batch/Lot', details.batch);
-          if (details.mrp) addKV('MRP', details.mrp);
-          if (details.manufacturedDate) addKV('Manufactured', details.manufacturedDate.toDateString());
-          if (els.kvs.children.length > 0) els.kvs.style.display = ''; else els.kvs.style.display = 'none';
-
-          // raw
-          els.rawText.textContent = details.rawText || '';
-          els.rawWrap.style.display = details.rawText ? '' : 'none';
-        } catch (err) {
-          console.error(err);
-          els.progressWrap.style.display = 'none';
-          els.error.textContent = 'Failed to process the image. Please try a clearer photo.';
-          els.error.style.display = '';
         }
-      }
-
-      els.input.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) handleFile(file);
       });
+      els.progressWrap.style.display = 'none';
+      text = (result && result.data && result.data.text) ? result.data.text : '';
+    }
+
+    const details = extractDetails(text);
+
+    let badgeText = 'No expiry date detected';
+    let badgeClass = 'status';
+    if (details.expiryDate) {
+      const now = new Date();
+      const days = Math.floor((details.expiryDate.setHours(0,0,0,0) - now.setHours(0,0,0,0)) / 86400000);
+      if (days < 0) { badgeText = `Expired ${Math.abs(days)} day${Math.abs(days)===1?'':'s'} ago`; badgeClass += ' destructive'; }
+      else if (days === 0) { badgeText = 'Expires today'; }
+      else { badgeText = `${days} day${days===1?'':'s'} left`; badgeClass += ' primary'; }
+      els.expiryDate.textContent = 'Expiry: ' + details.expiryDate.toDateString();
+    } else {
+      els.expiryDate.textContent = '';
+    }
+    els.statusBadge.className = badgeClass;
+    els.statusBadge.textContent = badgeText;
+    els.statusRow.style.display = '';
+
+    els.kvs.innerHTML = '';
+    const addKV = (label, value) => {
+      const d = document.createElement('div');
+      d.className = 'kv';
+      d.innerHTML = `<span>${label}</span><div>${value}</div>`;
+      els.kvs.appendChild(d);
+    };
+    if (details.productName) addKV('Product', details.productName);
+    if (details.batch) addKV('Batch/Lot', details.batch);
+    if (details.mrp) addKV('MRP', details.mrp);
+    if (details.manufacturedDate) addKV('Manufactured', details.manufacturedDate.toDateString());
+    if (els.kvs.children.length > 0) els.kvs.style.display = ''; else els.kvs.style.display = 'none';
+
+    els.rawText.textContent = details.rawText || '';
+    els.rawWrap.style.display = details.rawText ? '' : 'none';
+  } catch (err) {
+    console.error(err);
+    els.progressWrap.style.display = 'none';
+    els.error.textContent = (err && err.message) ? err.message : 'Failed to process the image. Please try a clearer photo.';
+    els.error.style.display = '';
+  }
+}
+
+els.input.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) handleFile(file);
+});
     </script>
   </body>
 </html>
