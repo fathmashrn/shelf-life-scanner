@@ -14,7 +14,7 @@
 
 ### Project Description
 it will detect the expiry date, calculate days left, and extract other useful details automatically
-
+https://preview--shelf-life-scanner.lovable.app/
 ### The Problem (that doesn't exist)
 result is not working properly that was our problem so we add a backup project
 
