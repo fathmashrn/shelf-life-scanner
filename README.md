@@ -1,73 +1,93 @@
-# Welcome to your Lovable project
+<img width="3188" height="1202" alt="frame (3)" src="https://github.com/user-attachments/assets/517ad8e9-ad22-457d-9538-a9e62d137cd7" />
 
-## Project info
 
-**URL**: https://lovable.dev/projects/e05a9374-3b09-4424-8bb2-d041ae3a91cf
+# [Expiry Date Scanner] 🎯
 
-## How can I edit this code?
 
-There are several ways of editing your application.
+## Basic Details
+### Team Name: [Tinker]
 
-**Use Lovable**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e05a9374-3b09-4424-8bb2-d041ae3a91cf) and start prompting.
+### Team Members
+- Team Lead: [Fathimath Sherin] - [Kannur University,Mangattuparamba]
+- Member 2: [Sreehari A E] - [Kannur University,Mangattuparamba]
 
-Changes made via Lovable will be committed automatically to this repo.
+### Project Description
+it will detect the expiry date, calculate days left, and extract other useful details automatically
 
-**Use your preferred IDE**
+### The Problem (that doesn't exist)
+result is not working properly that was our problem so we add a backup project
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### The Solution (that nobody asked for)
+Actually by looking its details we can get the details.But here we are using tech though it is useless
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Technical Details
+### Technologies/Components Used
+For Software:
+- [html,css,typescript]
+- [next js]
 
-Follow these steps:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+For Hardware:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Implementation
+For Software:
+# Installation
+[commands]
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Run
+[commands]
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Project Documentation
+For Software:
 
-**Edit a file directly in GitHub**
+# Screenshots (Add at least 3)
+![Screenshot1]<img width="1262" height="824" alt="image" src="https://github.com/user-attachments/assets/73c576d2-0705-4a36-840d-19d83ae92b5f" />
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
 
-**Use GitHub Codespaces**
+![Screenshot2]<img width="1195" height="685" alt="image" src="https://github.com/user-attachments/assets/4777478d-bb64-42e8-8f73-e9384c2a0248" />
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+![Screenshot3]<img width="756" height="781" alt="image" src="https://github.com/user-attachments/assets/a758d315-579a-43e2-a3ac-9819cfe5e955" />
 
-## What technologies are used for this project?
 
-This project is built with:
+# Diagrams
+![Workflow](Add your workflow/architecture diagram here)
+Add caption explaining your workflow
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+For Hardware:
 
-## How can I deploy this project?
+# Schematic & Circuit
+![Circuit](Add your circuit diagram here)
+Add caption explaining connections
 
-Simply open [Lovable](https://lovable.dev/projects/e05a9374-3b09-4424-8bb2-d041ae3a91cf) and click on Share -> Publish.
+![Schematic](Add your schematic diagram here)
+Add caption explaining the schematic
 
-## Can I connect a custom domain to my Lovable project?
+# Build Photos
+![Components](Add photo of your components here)
+List out all components shown
 
-Yes, you can!
+![Build](Add photos of build process here)
+Explain the build steps
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+![Final](Add photo of final product here)
+Explain the final build
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Project Demo
+# Video
+[Add your demo video link here]
+Explain what the video demonstrates
+
+# Additional Demos
+[Add any extra demo materials/links]
+
+## Team Contributions
+- [Name 1]: [Specific contributions]
+- [Name 2]: [Specific contributions]
+- [Name 3]: [Specific contributions]
+
+---
+Made with ❤️ at TinkerHub Useless Projects 
+
+![Static Badge](https://img.shields.io/badge/TinkerHub-24?color=%23000000&link=https%3A%2F%2Fwww.tinkerhub.org%2F)
+![Static Badge](https://img.shields.io/badge/UselessProjects--25-25?link=https%3A%2F%2Fwww.tinkerhub.org%2Fevents%2FQ2Q1TQKX6Q%2FUseless%2520Projects)
