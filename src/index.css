@@ -103,3 +103,52 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Extended design tokens and component utilities */
+@layer base {
+  :root {
+    --primary-glow: 222.2 84% 60%;
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--sidebar-ring)));
+    --gradient-cta: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--sidebar-ring)));
+    --shadow-elegant: 0 10px 30px -12px hsl(var(--primary) / 0.25);
+    --shadow-glow: 0 0 40px hsl(var(--sidebar-ring) / 0.35);
+    --transition-smooth: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --spot-x: 50%;
+    --spot-y: 50%;
+  }
+  .dark {
+    --primary-glow: 210 40% 98%;
+    --gradient-hero: linear-gradient(135deg, hsl(var(--sidebar-ring) / 0.5), hsl(var(--primary) / 0.9));
+    --gradient-cta: linear-gradient(135deg, hsl(var(--sidebar-ring) / 0.9), hsl(var(--primary)));
+    --shadow-elegant: 0 12px 40px -16px hsl(var(--sidebar-ring) / 0.35);
+    --shadow-glow: 0 0 48px hsl(var(--sidebar-ring) / 0.45);
+  }
+}
+
+@layer components {
+  .ambient-spot {
+    background-image: radial-gradient(600px circle at var(--spot-x) var(--spot-y), hsl(var(--sidebar-ring) / 0.12), transparent 60%);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn-hero {
+      transition: var(--transition-smooth);
+    }
+  }
+  .card-elevated {
+    @apply bg-card/80 backdrop-blur-sm border;
+    box-shadow: var(--shadow-elegant);
+  }
+  .btn-hero {
+    color: hsl(var(--primary-foreground));
+    background-image: var(--gradient-cta);
+    border: 1px solid hsl(var(--border) / 0.2);
+    box-shadow: var(--shadow-glow);
+  }
+  .btn-hero:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+  .btn-hero:active {
+    transform: translateY(0);
+  }
+}
